@@ -19,6 +19,7 @@ var object3DId = 0;
 
 function Object3D() {
 
+	// 为对象添加一个名为“id”的属性，该属性不可迭代不可写不可修改
 	Object.defineProperty( this, 'id', { value: object3DId ++ } );
 
 	this.uuid = _Math.generateUUID();
@@ -31,7 +32,7 @@ function Object3D() {
 
 	this.up = Object3D.DefaultUp.clone();
 
-	var position = new Vector3();
+	var position = new Vector3(); // 初始值是0,0,0
 	var rotation = new Euler();
 	var quaternion = new Quaternion();
 	var scale = new Vector3( 1, 1, 1 );

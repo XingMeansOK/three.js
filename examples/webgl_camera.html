@@ -41,6 +41,7 @@
 
 		<script>
 
+			// 浏览器的视口的宽高，有没有滚动条不会影响其大小，滚动条包含在内
 			var SCREEN_WIDTH = window.innerWidth;
 			var SCREEN_HEIGHT = window.innerHeight;
 			var aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
@@ -60,19 +61,20 @@
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
 
+				// 新建场景
 				scene = new THREE.Scene();
 
 				//
-
 				camera = new THREE.PerspectiveCamera( 50, 0.5 * aspect, 1, 10000 );
-				camera.position.z = 2500;
+				camera.position.z = 2500; // x,y是初始值0，position属性继承自Object3D
 
+				// 创建透视投影摄像机
 				cameraPerspective = new THREE.PerspectiveCamera( 50, 0.5 * aspect, 150, 1000 );
-
+				// CameraHelper使用线框描述相机的平截头体
 				cameraPerspectiveHelper = new THREE.CameraHelper( cameraPerspective );
 				scene.add( cameraPerspectiveHelper );
 
-				//
+				// 创建正射投影摄像机
 				cameraOrtho = new THREE.OrthographicCamera( 0.5 * frustumSize * aspect / - 2, 0.5 * frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 150, 1000 );
 
 				cameraOrthoHelper = new THREE.CameraHelper( cameraOrtho );
@@ -96,11 +98,13 @@
 
 				scene.add( cameraRig );
 
-				//
-
+				// 向场景中添加三个圆球
+				/*
+					Mesh相当于灯笼，第一个参数是灯笼的骨架，第二个参数是糊在骨架上的纸，也就是材质
+				*/
 				mesh = new THREE.Mesh(
-					new THREE.SphereBufferGeometry( 100, 16, 8 ),
-					new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe: true } )
+					new THREE.SphereBufferGeometry( 100, 16, 8 ), // 第一个参数是球形的半径，第二个参数是水平方向上片段个数，第三个参数是竖直方向上片段个数
+					new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe: true } )  // 以线框的方式绘制
 				);
 				scene.add( mesh );
 
@@ -118,7 +122,7 @@
 				mesh3.position.z = 150;
 				cameraRig.add( mesh3 );
 
-				//
+				// 向场景中添加随机点
 
 				var geometry = new THREE.Geometry();
 
