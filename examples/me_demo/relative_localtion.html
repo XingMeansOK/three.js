@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <style media="screen">
+      body {
+        margin: 0px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="../../build/three.js"></script>
+    <script type="text/javascript">
+      /*
+        验证子节点的位置都是相对父节点的
+        太阳、地球、月亮
+      */
+      // 浏览器宽高及横纵比
+      var SCREEN_WIDTH = window.innerWidth;
+			var SCREEN_HEIGHT = window.innerHeight;
+			var aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+      // canvas根节点
+      var container;
+      var scene; // 顶层场景
+      var cameraPerspective; // 透视摄像机
+      var sun, earth, moon;
+      var renderer;
+
+      init(); // 初始化场景
+      animate(); // 渲染动画
+      function init() {
+        container = document.createElement( "div" );
+        document.body.appendChild( container ); // 创建canvas根节点并添加到body上
+        // 创建场景
+        scene = new THREE.Scene();
+        // 创建投影摄像机，并添加到场景当中
+        cameraPerspective = new THREE.PerspectiveCamera( 70, aspect, 150, 4000 );
+        cameraPerspective.position.z = 1500; // x默认为0
+        cameraPerspective.position.y = 1750;
+        scene.add( cameraPerspective );
+
+        // 向场景中添加物件
+        // 创建太阳并添加到场景中
+        sun = new THREE.Mesh(
+          new THREE.SphereBufferGeometry( 200, 16, 8 ),
+          new THREE.MeshBasicMaterial( {color: 0x0000ff, wireframe: true} )
+        );
+        scene.add( sun );
+        // 创建地球，添加到太阳中，作为太阳的子节点
+        earth = new THREE.Mesh(
+          new THREE.SphereBufferGeometry( 50, 16, 8 ),
+          new THREE.MeshBasicMaterial( {color: 0x808080, wireframe: true} )
+        );
+        sun.add( earth );
+        // 创建月亮，添加到地球中，作为地球的子节点
+        moon = new THREE.Mesh(
+          new THREE.SphereBufferGeometry( 30, 16, 8 ),
+          new THREE.MeshBasicMaterial( {color: 0x808080, wireframe: true} )
+        );
+        earth.add( moon );
+
+        // 创建渲染器
+        renderer = new THREE.WebGLRenderer( {antialias: true} );
+        renderer.setPixelRatio( window.devicePixelRatio ); // 设置像素横纵比
+        renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+        renderer.domElement.style.position = "relative";
+        container.appendChild( renderer.domElement );
+
+        renderer.autoClear = false;
+      }
+      // 逐帧渲染的函数
+      function animate() {
+        requestAnimationFrame( animate );
+        render();
+      }
+      function render() {
+        var r = Date.now() * 0.0005;
+        // 计算地球位置
+
+        // 因为地球是太阳的子节点，所以地球的位置是相对太阳的
+        earth.position.x = 500 * Math.cos( r );
+        earth.position.z = 500 * Math.sin( r );
+
+        // 计算月球的位置
+
+        // 因为月球是地球的子节点，所以月球的位置是相对地球的
+        moon.position.x = 100 * Math.cos( 4 * r );
+        moon.position.z = 100 * Math.sin( 4 * r );
+
+        // 设置摄像机观察方向，瞄向太阳的方向
+        cameraPerspective.lookAt( sun.position );
+        //
+        renderer.clear();
+        // 渲染
+        renderer.render( scene, cameraPerspective );
+      }
+    </script>
+  </body>
+</html>

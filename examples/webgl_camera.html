@@ -64,6 +64,7 @@
 				// 新建场景
 				scene = new THREE.Scene();
 
+				// 所有Object3D对象都有默认的上方向Object3D.DefaultUp = new Vector3( 0, 1, 0 );
 				//
 				camera = new THREE.PerspectiveCamera( 50, 0.5 * aspect, 1, 10000 );
 				camera.position.z = 2500; // x,y是初始值0，position属性继承自Object3D
@@ -113,7 +114,7 @@
 					new THREE.MeshBasicMaterial( { color: 0x00ff00, wireframe: true } )
 				);
 				mesh2.position.y = 150;
-				mesh.add( mesh2 );
+				mesh.add( mesh2 ); // mesh2圆球作为子节点加入到mesh中
 
 				var mesh3 = new THREE.Mesh(
 					new THREE.SphereBufferGeometry( 5, 16, 8 ),
@@ -143,11 +144,12 @@
 				//
 
 
+				// WebGLRenderer构造函数中可以传入一个对象，对象中可以包含一个canvas对象，没有的会将会自动创建
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+				renderer.setPixelRatio( window.devicePixelRatio ); // 设置像素比率
+				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT ); //
 				renderer.domElement.style.position = "relative";
-				container.appendChild( renderer.domElement );
+				container.appendChild( renderer.domElement ); // renderer.domElement返回canvas的DOM对象
 
 				renderer.autoClear = false;
 
@@ -227,10 +229,12 @@
 
 				var r = Date.now() * 0.0005;
 
+				// 最大的球位置随时间的变化而变化
 				mesh.position.x = 700 * Math.cos( r );
 				mesh.position.z = 700 * Math.sin( r );
 				mesh.position.y = 700 * Math.sin( r );
 
+				// 子节点的位置都是相对父节点的???
 				mesh.children[ 0 ].position.x = 70 * Math.cos( 2 * r );
 				mesh.children[ 0 ].position.z = 70 * Math.sin( r );
 

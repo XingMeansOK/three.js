@@ -337,6 +337,7 @@ Object.assign( Object3D.prototype, EventDispatcher.prototype, {
 
 	add: function ( object ) {
 
+		// 支持同时添加多个子节点
 		if ( arguments.length > 1 ) {
 
 			for ( var i = 0; i < arguments.length; i ++ ) {
@@ -359,7 +360,7 @@ Object.assign( Object3D.prototype, EventDispatcher.prototype, {
 		if ( ( object && object.isObject3D ) ) {
 
 			if ( object.parent !== null ) {
-
+				// 如果要加入到当前节点的子节点已经有父节点了，将此子节点从原来的父节点移除
 				object.parent.remove( object );
 
 			}
