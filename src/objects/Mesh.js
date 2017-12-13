@@ -122,6 +122,10 @@ Mesh.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 	},
 
+	/*
+		原型的一个属性是自执行函数？？
+		自执行函数返回了一个和属性同名的方法
+	*/
 	raycast: ( function () {
 
 		var inverseMatrix = new Matrix4();
@@ -159,6 +163,11 @@ Mesh.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		}
 
+		/*
+			@param object是当前的Mesh对象
+			@param pA，pB，pC是三角形的三个顶点
+			判断射线和三角形是否相交
+		*/
 		function checkIntersection( object, material, raycaster, ray, pA, pB, pC, point ) {
 
 			var intersect;
@@ -190,9 +199,19 @@ Mesh.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		}
 
+		/*
+			@param object是当前的Mesh对象
+		*/
 		function checkBufferGeometryIntersection( object, raycaster, ray, position, uv, a, b, c ) {
 
-			vA.fromBufferAttribute( position, a );
+			/*
+				Sets this vector's x, y and z values from the attribute.
+				fromBufferAttribute函数内是这样地：
+				position[a*3]，position[a*3+1]，position[a*3+2]
+				abc是顶点的序号
+				顶点abc组成一个三角形
+			*/
+			vA.fromBufferAttribute( position, a ); // 将序号为a的顶点坐标赋值给vA
 			vB.fromBufferAttribute( position, b );
 			vC.fromBufferAttribute( position, c );
 
@@ -219,6 +238,9 @@ Mesh.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		}
 
+		/*
+			@param raycaster是从摄像机发出的射线
+		*/
 		return function raycast( raycaster, intersects ) {
 
 			var geometry = this.geometry;
@@ -229,15 +251,18 @@ Mesh.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 			// Checking boundingSphere distance to ray
 
+			// 计算几何体的最小包围球体
 			if ( geometry.boundingSphere === null ) geometry.computeBoundingSphere();
 
-			sphere.copy( geometry.boundingSphere );
-			sphere.applyMatrix4( matrixWorld );
+			sphere.copy( geometry.boundingSphere ); // copy的过程不会应用源的矩阵变换吗？？看一下copy的源码
+			sphere.applyMatrix4( matrixWorld ); // 应用源的矩阵变换，之后就和源一致了？？
 
+			// 如果射线和最小包围球没有相交就返回
 			if ( raycaster.ray.intersectsSphere( sphere ) === false ) return;
 
 			//
 
+			// ？？
 			inverseMatrix.getInverse( matrixWorld );
 			ray.copy( raycaster.ray ).applyMatrix4( inverseMatrix );
 
@@ -284,8 +309,10 @@ Mesh.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 					// non-indexed buffer geometry
 
+					// 逐个检查当前Mesh的三角形
 					for ( i = 0, l = position.count; i < l; i += 3 ) {
 
+						// 点的序号，abc组成一个三角形
 						a = i;
 						b = i + 1;
 						c = i + 2;

@@ -75,13 +75,24 @@ Object.assign( Raycaster.prototype, {
 
 	setFromCamera: function ( coords, camera ) {
 
+		/*
+			参数coords中包含鼠标的位置，是规格化设备坐标（NDC）下的坐标，-1到1
+		*/
+		// 透视摄像机
 		if ( ( camera && camera.isPerspectiveCamera ) ) {
 
+			// 通过应用摄像机的全局变换矩阵，将射线的原点移动到摄像机的位置（世界坐标系下）
 			this.ray.origin.setFromMatrixPosition( camera.matrixWorld );
+			/*
+				this.ray.direction.set( coords.x, coords.y, 0.5 )返回一个Vector3类型的对象实例V，表示一个NDC坐标点，指示射线的方向，就叫方向点吧
+				V.unproject( camera )得到方向点在世界坐标系下的坐标；
+				方向点和起点（都在世界坐标系下）确定了射线的方向
+				方向向量单位化后保存在direction属性中
+			*/
 			this.ray.direction.set( coords.x, coords.y, 0.5 ).unproject( camera ).sub( this.ray.origin ).normalize();
 
 		} else if ( ( camera && camera.isOrthographicCamera ) ) {
-
+		// 正射摄像机
 			this.ray.origin.set( coords.x, coords.y, ( camera.near + camera.far ) / ( camera.near - camera.far ) ).unproject( camera ); // set origin in plane of camera
 			this.ray.direction.set( 0, 0, - 1 ).transformDirection( camera.matrixWorld );
 
@@ -93,6 +104,7 @@ Object.assign( Raycaster.prototype, {
 
 	},
 
+	// 第二个参数是是否迭代检测object的子节点
 	intersectObject: function ( object, recursive ) {
 
 		var intersects = [];

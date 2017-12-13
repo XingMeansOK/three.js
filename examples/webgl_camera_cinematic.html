@@ -25,7 +25,9 @@
 		<script src='js/libs/dat.gui.min.js'></script>
 
 		<script>
-
+			/*
+				cinematic 电影的；影片的
+			*/
 			var container, stats;
 			var camera, scene, raycaster, renderer;
 
@@ -89,7 +91,7 @@
 
 				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 
-		
+
 
 				window.addEventListener( 'resize', onWindowResize, false );
 
@@ -197,7 +199,7 @@
 				if ( intersects.length > 0 ) {
 
 					var targetDistance = intersects[ 0 ].distance;
-					
+
 					//Using Cinematic camera focusAt method
 					camera.focusAt(targetDistance);
 

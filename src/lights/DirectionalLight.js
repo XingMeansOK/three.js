@@ -13,10 +13,11 @@ function DirectionalLight( color, intensity ) {
 
 	this.type = 'DirectionalLight';
 
-	this.position.copy( Object3D.DefaultUp );
+	this.position.copy( Object3D.DefaultUp ); // 光源的默认位置是（0,1,0）
 	this.updateMatrix();
 
 	this.target = new Object3D();
+	// 光源的照射目标点，可以指定为任何Object3D实例，但是要确保该实例已经加入到场景中（确保光源和目标点的坐标变换是同步的）
 
 	this.shadow = new DirectionalLightShadow();
 

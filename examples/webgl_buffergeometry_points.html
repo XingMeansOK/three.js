@@ -61,7 +61,7 @@
 
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0x050505 );
-				scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
+				scene.fog = new THREE.Fog( 0x050505, 2000, 3500 ); // 线性雾化效果
 
 				//
 
@@ -80,7 +80,7 @@
 
 					// positions
 
-					var x = Math.random() * n - n2;
+					var x = Math.random() * n - n2; // 随机产生的坐标值范围是-500到500
 					var y = Math.random() * n - n2;
 					var z = Math.random() * n - n2;
 
@@ -88,7 +88,7 @@
 
 					// colors
 
-					var vx = ( x / n ) + 0.5;
+					var vx = ( x / n ) + 0.5; // 粒子的颜色和其所在的位置有关
 					var vy = ( y / n ) + 0.5;
 					var vz = ( z / n ) + 0.5;
 
@@ -101,7 +101,7 @@
 				geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
 				geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
 
-				geometry.computeBoundingSphere();
+				geometry.computeBoundingSphere(); // 计算最小包围球，结果保存在.boundingSphere属性中 不过好像没啥用啊这句话？？
 
 				//
 

@@ -3,9 +3,10 @@
  * @author mr.doob / http://mrdoob.com/
  */
 
+// 检测浏览器是否支持webgl
 var Detector = {
 
-	canvas: !! window.CanvasRenderingContext2D,
+	canvas: !! window.CanvasRenderingContext2D, // 强制类型转换；连用两个！可以将变量转换为bool
 	webgl: ( function () {
 
 		try {

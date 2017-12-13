@@ -45,6 +45,7 @@ function WebGLRenderer( parameters ) {
 
 	parameters = parameters || {};
 
+	// 通常在变量名前加上下划线表示私有属性，仅仅是表示而已
 	var _canvas = parameters.canvas !== undefined ? parameters.canvas : document.createElementNS( 'http://www.w3.org/1999/xhtml', 'canvas' ),
 		_context = parameters.context !== undefined ? parameters.context : null,
 
@@ -206,9 +207,15 @@ function WebGLRenderer( parameters ) {
 
 		// event listeners must be registered before WebGL context is created, see #12753
 
+		/*
+			在某些时候程序可能会都会丢失WebGL绘图上下文，例如某个页面占用GPU时间过长，系统决定重启GPU，等等
+			这些情况下丢失了绘图上下文，不会自动找回，因此需要处理丢失绘图上下文的情况
+			https://www.khronos.org/webgl/wiki/HandlingContextLost需要翻墙
+		*/
 		_canvas.addEventListener( 'webglcontextlost', onContextLost, false );
 		_canvas.addEventListener( 'webglcontextrestored', onContextRestore, false );
 
+		// 获取绘图上下文
 		_gl = _context || _canvas.getContext( 'webgl', contextAttributes ) || _canvas.getContext( 'experimental-webgl', contextAttributes );
 
 		if ( _gl === null ) {
@@ -254,6 +261,9 @@ function WebGLRenderer( parameters ) {
 
 	function initGLContext() {
 
+		/*
+			
+		*/
 		extensions = new WebGLExtensions( _gl );
 		extensions.get( 'WEBGL_depth_texture' );
 		extensions.get( 'OES_texture_float' );

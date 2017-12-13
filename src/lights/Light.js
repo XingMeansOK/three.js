@@ -12,8 +12,8 @@ function Light( color, intensity ) {
 
 	this.type = 'Light';
 
-	this.color = new Color( color );
-	this.intensity = intensity !== undefined ? intensity : 1;
+	this.color = new Color( color ); // 光源颜色
+	this.intensity = intensity !== undefined ? intensity : 1; // 光源强度，默认是1
 
 	this.receiveShadow = undefined;
 

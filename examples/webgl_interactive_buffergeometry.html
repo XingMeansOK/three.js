@@ -41,6 +41,7 @@
 
 		<script>
 
+			// 检测浏览器是否支持webgl
 			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
 			var container, stats;
@@ -66,13 +67,18 @@
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0x050505 );
 				scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
+				/*
+					雾化效果，线性雾化，也就是说一点的雾化程度取决于该点和视点的距离，距离越远，雾化程度越高
+					第一个参数是雾的颜色，第二、三个参数是雾区到视点的最近距离和最远距离
+				*/
 
 				//
+				// 添加光源
 
-				scene.add( new THREE.AmbientLight( 0x444444 ) );
+				scene.add( new THREE.AmbientLight( 0x444444 ) ); // 环境光（没有方向，也不会产生阴影）
 
-				var light1 = new THREE.DirectionalLight( 0xffffff, 0.5 );
-				light1.position.set( 1, 1, 1 );
+				var light1 = new THREE.DirectionalLight( 0xffffff, 0.5 ); // 平行光，参数是颜色和强度，强度默认是1
+				light1.position.set( 1, 1, 1 ); // 光源的位置。平行光的指向是position -> target，target初始是指向一个默认的Object3D，也可以是任何已经添加到scene中的Object3D实例
 				scene.add( light1 );
 
 				var light2 = new THREE.DirectionalLight( 0xffffff, 1.5 );
@@ -85,9 +91,9 @@
 
 				var geometry = new THREE.BufferGeometry();
 
-				var positions = new Float32Array( triangles * 3 * 3 );
-				var normals = new Float32Array( triangles * 3 * 3 );
-				var colors = new Float32Array( triangles * 3 * 3 );
+				var positions = new Float32Array( triangles * 3 * 3 ); // 三角形顶点，每个三角形三个顶点，每个顶点三个坐标分量
+				var normals = new Float32Array( triangles * 3 * 3 ); // 三角形法向量
+				var colors = new Float32Array( triangles * 3 * 3 ); // 三角形颜色
 
 				var color = new THREE.Color();
 
@@ -105,10 +111,11 @@
 
 					// positions
 
-					var x = Math.random() * n - n2;
+					// 首先算出一个三角形坐标的基本值
+					var x = Math.random() * n - n2; // 坐标分量的范围是-400到400
 					var y = Math.random() * n - n2;
 					var z = Math.random() * n - n2;
-
+					// 然后根据这个基本值算出三个顶点坐标
 					var ax = x + Math.random() * d - d2;
 					var ay = y + Math.random() * d - d2;
 					var az = z + Math.random() * d - d2;
@@ -134,13 +141,14 @@
 					positions[ i + 8 ] = cz;
 
 					// flat face normals
+					// 计算平面法向量
 
 					pA.set( ax, ay, az );
 					pB.set( bx, by, bz );
 					pC.set( cx, cy, cz );
 
-					cb.subVectors( pC, pB );
-					ab.subVectors( pA, pB );
+					cb.subVectors( pC, pB ); // pC - pB
+					ab.subVectors( pA, pB ); // pA - pB
 					cb.cross( ab );
 
 					cb.normalize();
@@ -163,6 +171,7 @@
 
 					// colors
 
+					// 设置颜色，颜色值和位置有关
 					var vx = ( x / n ) + 0.5;
 					var vy = ( y / n ) + 0.5;
 					var vz = ( z / n ) + 0.5;
@@ -183,16 +192,23 @@
 
 				}
 
-				geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+				geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) ); // 第二个参数：与单个顶点相关的数据步长，这里是位置，就是xyz，步长为3
 				geometry.addAttribute( 'normal', new THREE.BufferAttribute( normals, 3 ) );
 				geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
 
 				geometry.computeBoundingSphere();
 
+				// MeshPhongMaterial反光材质
 				var material = new THREE.MeshPhongMaterial( {
 						color: 0xaaaaaa, specular: 0xffffff, shininess: 250,
 						side: THREE.DoubleSide, vertexColors: THREE.VertexColors
 				} );
+				// 同时使用color和vertexColors，得到的材质颜色是两种颜色的混合
+
+				/*
+					没有看到在哪里设置画的东西是一个个的三角形，应该是geometry绘制的任何东西都是由一个个三角形组成的；
+					这也符合原生的webgl也是如此
+				*/
 
 				mesh = new THREE.Mesh( geometry, material );
 				scene.add( mesh );
@@ -202,7 +218,7 @@
 				raycaster = new THREE.Raycaster();
 
 				mouse = new THREE.Vector2();
-
+				// 在鼠标所在的三角形上加上白色的边框
 				var geometry = new THREE.BufferGeometry();
 				geometry.addAttribute( 'position', new THREE.BufferAttribute( new Float32Array( 4 * 3 ), 3 ) );
 
@@ -210,6 +226,14 @@
 
 				line = new THREE.Line( geometry, material );
 				scene.add( line );
+
+				/*测试代码*/
+				// var geometry2 = new THREE.BufferGeometry();
+				// geometry2.addAttribute( 'position', new THREE.BufferAttribute( new Float32Array( 2 * 3 ), 3 ) );
+        //
+				// lineT = new THREE.Line( geometry2, material );
+				// scene.add( lineT );
+				/*测试代码*/
 
 				//
 
@@ -242,10 +266,19 @@
 			function onDocumentMouseMove( event ) {
 
 				event.preventDefault();
-
+				// 鼠标的屏幕坐标转化为规格化设备坐标：坐标范围在-1到1之间
 				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
 				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-
+				/*
+					屏幕坐标（原点在左上角，x指向右，y指向下）到规格化设备坐标NDC（原点在屏幕中心，xy都是-1到1）的坐标转换
+					x，y为屏幕坐标，XY为NDC坐标，WH为屏幕宽高，这里认为画布是充满整个window
+					1.屏幕坐标区间长度映射到2：
+						2x/w，2y/h，也就是x坐标区间由0-W变为0-2，y由0-H变为0-2
+					2.变换坐标原点：
+					 	2x/w - 1, 2y/h -1
+					3.改变y轴方向：
+					  2x/w - 1, -2y/h + 1
+				*/
 			}
 
 			//
@@ -266,13 +299,15 @@
 				mesh.rotation.x = time * 0.15;
 				mesh.rotation.y = time * 0.25;
 
-				raycaster.setFromCamera( mouse, camera );
-
-				var intersects = raycaster.intersectObject( mesh );
+				// 看setFromCamera的源码
+				raycaster.setFromCamera( mouse, camera ); // Updates the ray with a new origin and direction.
+				// 其中的mouse中包含的是鼠标的规格化设备坐标，in normalized device coordinates (NDC)
+				// setFromCamera函数将确定射线的起点和方向，其中camera摄像机的位置确定了射线的起点，鼠标位置转化到世界坐标系下，确定射线方向
+				var intersects = raycaster.intersectObject( mesh ); // 返回结果[ { distance, point, face, faceIndex, indices, object }, ... ]
 
 				if ( intersects.length > 0 ) {
 
-					var intersect = intersects[ 0 ];
+					var intersect = intersects[ 0 ]; // 相交的三角形可能有多个，但是根据深度排序过了
 					var face = intersect.face;
 
 					var linePosition = line.geometry.attributes.position;
@@ -288,6 +323,21 @@
 					line.geometry.applyMatrix( mesh.matrix );
 
 					line.visible = true;
+
+					/*测试代码*/
+					// var inverseMatrix = new THREE.Matrix4();
+					// var ray = new THREE.Ray();
+					// var k = 10000
+					// inverseMatrix.getInverse( mesh.matrixWorld );
+					// ray.copy( raycaster.ray ).applyMatrix4( inverseMatrix );
+          //
+					// var o = ray.origin, d = ray.direction;
+					// // lineT.geometry.attributes.position.setXYZ(0, o.x, o.y, o.z);
+					// // lineT.geometry.attributes.position.setXYZ(1, o.x + d.x * k, o.y + d.y * k, o.z + d.z * k);
+					// debugger
+					// lineT.geometry.attributes.position.setXYZ(0, 0, 0, 0);
+					// lineT.geometry.attributes.position.setXYZ(1, ray.origin.x, 0, 0);
+					/*测试代码*/
 
 				} else {
 

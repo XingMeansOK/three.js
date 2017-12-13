@@ -325,11 +325,17 @@ Object.assign( Vector3.prototype, {
 
 	}(),
 
+	// 又出现了这种自执行函数的写法，好像还是没太看出好处在哪里。。
 	unproject: function () {
 
 		var matrix = new Matrix4();
 
 		return function unproject( camera ) {
+
+			var v = this.clone(); // 克隆一个和当前向量相同的向量用来测试
+			v.applyMatrix4( matrix.getInverse( camera.projectionMatrix ) ); // NDC坐标乘以摄像机的投影矩阵的逆矩阵，得到摄像机坐标系下的坐标
+			v.applyMatrix4( camera.matrixWorld ); // 摄像机坐标乘以摄像机的全局变换矩阵，得到世界坐标
+			// 下面这行只是将上面两步合起来了，得到结果是一样的
 
 			matrix.multiplyMatrices( camera.matrixWorld, matrix.getInverse( camera.projectionMatrix ) );
 			return this.applyMatrix4( matrix );
