@@ -62,6 +62,7 @@ THREE.DragControls = function ( _objects, _camera, _domElement ) {
 
 		var rect = _domElement.getBoundingClientRect();
 
+		// 鼠标屏幕坐标转NDC坐标
 		_mouse.x = ( ( event.clientX - rect.left ) / rect.width ) * 2 - 1;
 		_mouse.y = - ( ( event.clientY - rect.top ) / rect.height ) * 2 + 1;
 

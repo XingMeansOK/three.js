@@ -2,13 +2,4 @@ Mesh的raycast方法中，将当前mesh的geometry最小包围球复制给了另
 同时还把geometry的worldMatrix应用到了A上，A就和geometry的最小包围球一致了
 复制的过程不会应用变换吗？查看copy的源码，验证一下
 
-还有就是还是raycast方法，验证相交用的射线是摄像机和鼠标确定的射线A乘以Mesh的worldMatrix的逆矩阵得到射线B，为什么？？
-
-如果object3D对象没有父类，那么他的matrix就和worldMatrix一致
-顺道模拟一下整个坐标变换的过程吧。。。
-
-matrix属性是在局部坐标系下的变换矩阵，父节点下的变换
-worldMatrix是总的变换矩阵，由多个matrix垒乘得到？？？
-这个变换中包含平移旋转缩放？？
-
 屏幕坐标系下的z值信息

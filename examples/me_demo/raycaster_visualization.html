@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <style>
+      body {
+        margin: 0px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 这个demo算是看到了投影本质的一角吧。。之后有时间可以完善一下raycaster和平截头体内部mesh的相交监测
+    不过最棒的还是解决了Mesh源码中raycast方法里为什么要同时用raycaster和ray（原来一个是世界坐标，一个是局部坐标）
+    （因为受到了这个demo中计算indicater位置的启发） -->
+    <script src="../../build/three.js"></script>
+    <script type="text/javascript">
+    /*
+      鼠标拾取，将射线可视化出来
+    */
+      var SCREEN_WIDTH = window.innerWidth;
+      var SCREEN_HEIGHT = window.innerHeight;
+      var aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+
+      var container; // canvas的父节点
+      var scene, cameraGod, cameraPerspective, cameraPerspectiveHelper,
+        mesh, raycaster, mouse, nearClipPlane, farClipPlane, renderer,
+        nearIndicater, farIndicater;
+
+      var near = 150, far = 1000; // 普通透视摄像机的近截面和远截面距离摄像机的距离
+
+      // 获取距离摄像机距离为distanceToCamera的位置的视锥宽度
+      THREE.PerspectiveCamera.prototype.getFrustumWidthOf = (function() {
+        function d2R(d) { return d * Math.PI / 180; } // 角度转弧度
+        return function ( distanceToCamera ){
+          if( distanceToCamera < this.near || distanceToCamera > this.far ) return;
+          var h = distanceToCamera * Math.tan( d2R( this.fov / 2 ) ) * 2;
+          return this.aspect * h;
+        }
+      }())
+
+      // 渲染函数
+      var render = ( function() { // 虽然有变量提升这个东西，但是如果render的赋值在调用之后，还是会报undefined的错误
+        var m = new THREE.Matrix4(); // 只有render函数能访问到，而且每次render用的都是这个变量，不用每次执行都新建
+        return function() {
+          renderer.clear();
+
+          raycaster.setFromCamera( mouse, cameraPerspective ); // 更新射线的方向
+          // 其中的mouse中包含的是鼠标的规格化设备坐标，in normalized device coordinates (NDC)
+          // setFromCamera函数将确定射线的起点和方向，射线的起点在世界坐标系下camera的位置，方向指向mouse转化到世界坐标系下的坐标，
+          // 确定射线和nearClipPlane的交点
+          var intersects1 = raycaster.intersectObject( nearClipPlane ); // 返回结果[ { distance, point, face, faceIndex, indices, object }, ... ]
+          var intersects2 = raycaster.intersectObject( farClipPlane );
+          if( intersects1.length > 0 && intersects2.length > 0 ) {
+
+            // 处理近截面
+            var intersect = intersects1[ 0 ]; // 交点
+            // 更新表示交点的nearIndicater的位置，注意：交点的坐标是世界坐标，mesh对象的position是局部坐标
+            // var m = new THREE.Matrix4();
+            m.getInverse( nearClipPlane.matrixWorld ); // 获取nearClipPlane全局变换的逆矩阵
+            intersect.point.applyMatrix4( m ); // 交点：世界坐标转到nearClipPlane的局部坐标
+            nearIndicater.position.copy( intersect.point );
+
+            // 处理远截面也一样
+            intersect = intersects2[ 0 ];
+            m.getInverse( farClipPlane.matrixWorld );
+            intersect.point.applyMatrix4( m );
+            farIndicater.position.copy( intersect.point );
+          }
+
+          /*
+            左右分屏，右边是上帝视角
+          */
+          cameraPerspectiveHelper.visible = false;
+
+          renderer.setViewport( 0, 0, SCREEN_WIDTH / 2, SCREEN_HEIGHT );
+          renderer.render( scene, cameraPerspective );
+
+          // 上帝视角可以看见摄像机视锥
+          cameraPerspectiveHelper.visible = true;
+
+          renderer.setViewport( SCREEN_WIDTH/2, 0, SCREEN_WIDTH/2, SCREEN_HEIGHT );
+          renderer.render( scene, cameraGod );
+        }
+      }() )
+
+      function init() {
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
+
+        scene = new THREE.Scene();
+
+        // 左右分屏，分别是上帝视角摄像机的影像，普通摄像机的影像
+        // 上帝视角的摄像机
+        cameraGod = new THREE.PerspectiveCamera( 50, aspect * 0.5, 1, 10000 );
+        var disToOrigin = 1000;
+        cameraGod.position.fromArray( [ disToOrigin, disToOrigin, disToOrigin ], 0 ); // 最后一个参数是在数组中的偏移量
+        cameraGod.lookAt(0, 0, 0);
+        /*
+          上帝视角的摄像机始终没有添加到scene中
+        */
+
+        // 普通摄像机
+        cameraPerspective = new THREE.PerspectiveCamera( 50, aspect * 0.5, near, far );
+        cameraPerspective.position.z = 700;
+        cameraPerspectiveHelper = new THREE.CameraHelper( cameraPerspective ); // 用线框表示的摄像机视锥
+        scene.add( cameraPerspectiveHelper );
+        scene.add( cameraPerspective );
+
+        // 添加被观察的对象
+        initObjects();
+
+        // 创建渲染器对象
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setPixelRatio( window.devicePixelRatio ); // 设置像素比率
+        renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT ); //
+        renderer.domElement.style.position = "relative";
+        container.appendChild( renderer.domElement ); // renderer.domElement返回canvas的DOM对象
+
+        renderer.autoClear = false;
+
+        // 初始化射线
+        raycaster = new THREE.Raycaster();
+        // 用于保存鼠标位置的向量
+        mouse = new THREE.Vector2();
+
+        // 处理窗口大小改变
+        window.addEventListener( 'resize', onWindowResize, false );
+        // 处理鼠标移动
+        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+
+      }
+
+      /*
+        初始化场景中被观察的对象
+      */
+      function initObjects() {
+        mesh = new THREE.Mesh(
+					new THREE.SphereBufferGeometry( 100, 16, 8 ), // 第一个参数是球形的半径，第二个参数是水平方向上片段个数，第三个参数是竖直方向上片段个数
+					new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe: true } )  // 以线框的方式绘制
+				);
+				scene.add( mesh );
+
+        /*
+          nearClipPlane是一个和摄像机视锥近截面重合的平面
+        */
+        var w = cameraPerspective.getFrustumWidthOf(cameraPerspective.near);
+        var geometry = new THREE.PlaneGeometry( w, w / cameraPerspective.aspect );
+        // transparent属性控制是否透明，opacity控制透明的程度，单独用opacity没啥效果
+        var material = new THREE.MeshBasicMaterial( {color: 0x00ff00, side: THREE.DoubleSide, opacity: 0.3, transparent: true} );
+        nearClipPlane = new THREE.Mesh( geometry, material );
+        nearClipPlane.position.z = -1 * near;
+
+        /*
+          farClipPlane是一个和摄像机视锥近截面重合的平面
+        */
+        w = cameraPerspective.getFrustumWidthOf(cameraPerspective.far);
+        geometry = new THREE.PlaneGeometry( w, w / cameraPerspective.aspect );
+        material = new THREE.MeshBasicMaterial( {color: 0x0000ff, side: THREE.DoubleSide, opacity: 0.3, transparent: true} );
+        farClipPlane = new THREE.Mesh( geometry, material );
+        farClipPlane.position.z = -1 * far;
+
+        /*
+          nearIndicater用于在nearClipPlane内部指示透视摄像机-鼠标射线与nearClipPlane的交点位置
+        */
+        geometry = new THREE.PlaneGeometry( 10, 10 );
+        material = new THREE.MeshBasicMaterial( {color: 0xfff000, side: THREE.DoubleSide} );
+        nearIndicater = new THREE.Mesh( geometry, material );
+
+        /*
+          farIndicater在远截面上，作用和nearIndicater一样
+        */
+        geometry = new THREE.PlaneGeometry( 100, 100 );
+        material = new THREE.MeshBasicMaterial( {color: 0x000fff, side: THREE.DoubleSide} );
+        farIndicater = new THREE.Mesh( geometry, material );
+
+        nearClipPlane.add( nearIndicater );
+        farClipPlane.add( farIndicater );
+        cameraPerspective.add( nearClipPlane );
+        cameraPerspective.add( farClipPlane );
+      }
+
+      /*
+        逐帧渲染
+      */
+      function animate() {
+        requestAnimationFrame( animate );
+        render();
+      }
+
+      // 窗口大小改变处理函数
+      function onWindowResize( event ) {
+
+        SCREEN_WIDTH = window.innerWidth;
+        SCREEN_HEIGHT = window.innerHeight;
+        aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+
+        renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+
+        cameraGod.aspect = 0.5 * aspect;
+        cameraGod.updateProjectionMatrix(); // 更新投影矩阵
+
+        cameraPerspective.aspect = 0.5 * aspect;
+        cameraPerspective.updateProjectionMatrix();
+      }
+      // 鼠标移动处理函数
+      function onDocumentMouseMove( event ) {
+
+        event.preventDefault();
+        // 因为canvas同时在左右两个视口中渲染，所以左右也是两个独立的NDC坐标系
+        if( event.clientX < SCREEN_WIDTH / 2 ) { // 如果是在左边这半屏幕，也就是在左边这个视口（普通视角）
+          // 鼠标的屏幕坐标转化为规格化设备坐标：坐标范围在-1到1之间
+          mouse.x = ( event.clientX / ( SCREEN_WIDTH / 2 ) ) * 2 - 1; // 如果要算右边这半，分子是不是要改成event.clientX - SCREEN_WIDTH / 2 ？？
+          mouse.y = - ( event.clientY / SCREEN_HEIGHT ) * 2 + 1;
+          // console.log( mouse.x + ', ' + mouse.y );
+          /*
+            屏幕坐标（原点在左上角，x指向右，y指向下）到规格化设备坐标NDC（原点在屏幕中心，xy都是-1到1）的坐标转换
+            x，y为屏幕坐标，XY为NDC坐标，WH为屏幕宽高，这里认为画布是充满整个window
+            1.屏幕坐标区间长度映射到2：
+              2x/w，2y/h，也就是x坐标区间由0-W变为0-2，y由0-H变为0-2
+            2.变换坐标原点：
+              2x/w - 1, 2y/h -1
+            3.改变y轴方向：
+              2x/w - 1, -2y/h + 1
+          */
+        }
+
+      }
+
+      init();
+      animate();
+
+    </script>
+  </body>
+</html>

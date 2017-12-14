@@ -166,6 +166,8 @@ Mesh.prototype = Object.assign( Object.create( Object3D.prototype ), {
 		/*
 			@param object是当前的Mesh对象
 			@param pA，pB，pC是三角形的三个顶点
+			@param raycaster 摄像机-鼠标射线（世界坐标系）
+			@param ray 摄像机-鼠标射线（当前Mesh的局部坐标系）
 			判断射线和三角形是否相交
 		*/
 		function checkIntersection( object, material, raycaster, ray, pA, pB, pC, point ) {
@@ -262,7 +264,10 @@ Mesh.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 			//
 
-			// ？？
+			/*
+				raycaster的坐标是世界坐标，raycaster的坐标乘以当前mesh的全局变换逆矩阵
+				就得到了raycaster在mesh局部坐标系下的坐标，并将这个坐标赋值给了ray
+			*/
 			inverseMatrix.getInverse( matrixWorld );
 			ray.copy( raycaster.ray ).applyMatrix4( inverseMatrix );
 
