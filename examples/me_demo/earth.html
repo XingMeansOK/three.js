@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <style media="screen">
+      body {
+        background-color: #000;
+        margin: 0px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="../../build/three.js"></script>
+    <script src="../js/controls/OrbitControls.js"></script>
+    <script type="text/javascript">
+      // globel varb
+      var scene, cameraPerspective, bulbLight, renderer;
+
+
+      function init() {
+        // 创建canvas父节点
+        var container = document.createElement( 'div' );
+        document.body.appendChild( container );
+        // 创建场景
+        scene = new THREE.Scene();
+        // 创建摄像机
+        cameraPerspective = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 100 );
+        cameraPerspective.position.z = 4;
+
+        // 创建点光源
+        bulbLight = new THREE.PointLight( 0xffee88, 20, 100, 2 ); // 光源颜色，光照强度，照射范围，2是physically correct lighting mode？
+        // 因为光源本身是不可见的，所以加上一个圆球，用来表示点光源
+        bulbLight.add( new THREE.Mesh(
+          new THREE.SphereGeometry( 0.02, 16, 8 ), // 半径，横向分段数，纵向分段数
+          new THREE.MeshStandardMaterial( {
+            emissive: 0xffffee, // 发射光的颜色，不受其他光源的影响
+            emissiveIntensity: 1, // 发射光强度
+            color: 0x000000
+          } )
+        ) ) // 点光源添加圆球结束
+
+        bulbLight.position.set( -2, 2, 2 );
+        bulbLight.castShadow = true;
+        scene.add( bulbLight );
+
+        var textureLoader = new THREE.TextureLoader(); // 创建纹理加载器
+        // 地球的材质
+        var ballMat = new THREE.MeshStandardMaterial( {
+          color: 0xffffff,
+          roughness: 0.5,
+          metalness: 1.0
+        });
+        // 加载地球贴图
+        textureLoader.load( "../textures/planets/earth_atmos_2048.jpg", function( map ) {
+          map.anisotropy = 4;
+          ballMat.map = map;
+          ballMat.needsUpdate = true;
+        } );
+        var ballGeometry = new THREE.SphereGeometry( 0.5, 32, 32 );
+        var ballMesh = new THREE.Mesh( ballGeometry, ballMat );
+        ballMesh.rotation.y = Math.PI;
+        ballMesh.castShadow = true;
+        scene.add( ballMesh );
+
+        // 创建渲染器
+        renderer = new THREE.WebGLRenderer();
+        renderer.physicallyCorrectLights = true;
+        renderer.gammaInput = true;
+        renderer.gammaOutput = true;
+        renderer.shadowMap.enabled = true;
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        container.appendChild( renderer.domElement );
+
+
+        var controls = new THREE.OrbitControls( cameraPerspective, renderer.domElement );
+
+        window.addEventListener( 'resize', onWindowResize, false );
+
+      }
+
+      // 处理窗口大小改变
+      function onWindowResize() {
+        // 更新摄像机投影矩阵
+        cameraPerspective.aspect = window.innerWidth / window.innerHeight;
+        cameraPerspective.updateProjectionMatrix();
+        // 改变画布大小
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+      }
+
+      // 渲染函数
+      function render() {
+        renderer.render( scene, cameraPerspective );
+      }
+
+      function animate() {
+        requestAnimationFrame( animate );
+        render();
+      }
+
+      init();
+      animate();
+    </script>
+  </body>
+</html>

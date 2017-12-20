@@ -7,6 +7,9 @@ import { Vector2 } from '../math/Vector2.js';
 
 function LightShadow( camera ) {
 
+	/*
+		LightShadow构造函数中的透视摄像机对象：以光源的视角观察世界。用来生成景深图；从光的角度看其他物体后面的物体将会在阴影中。
+	*/
 	this.camera = camera;
 
 	this.bias = 0;

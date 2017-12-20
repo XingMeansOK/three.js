@@ -112,26 +112,29 @@
 
 				scene = new THREE.Scene();
 
-				var bulbGeometry = new THREE.SphereGeometry( 0.02, 16, 8 );
-				bulbLight = new THREE.PointLight( 0xffee88, 1, 100, 2 );
+				var bulbGeometry = new THREE.SphereGeometry( 0.02, 16, 8 ); // 半径，横向分段数，纵向分段数
+				bulbLight = new THREE.PointLight( 0xffee88, 1, 100, 2 ); // 光源颜色，光照强度，照射范围，2是physically correct lighting mode？
 
 				bulbMat = new THREE.MeshStandardMaterial( {
-					emissive: 0xffffee,
-					emissiveIntensity: 1,
+					emissive: 0xffffee, // 发射光的颜色，不受其他光源的影响
+					emissiveIntensity: 1, // 发射光强度
 					color: 0x000000
 				});
+				// 因为点光源本身是不可见的，所以加上一个小圆球，用于指示点光源的位置
 				bulbLight.add( new THREE.Mesh( bulbGeometry, bulbMat ) );
 				bulbLight.position.set( 0, 2, 0 );
 				bulbLight.castShadow = true;
 				scene.add( bulbLight );
 
+				// 半球光，一种直接置于场景上方的光源，颜色从天空的颜色逐渐消失（渐变？？）到地面的颜色。不会产生阴影
 				hemiLight = new THREE.HemisphereLight( 0xddeeff, 0x0f0e0d, 0.02 );
 				scene.add( hemiLight );
 
+				// 地板的材质
 				floorMat = new THREE.MeshStandardMaterial( {
-					roughness: 0.8,
+					roughness: 0.8, // 粗糙度0-1
 					color: 0xffffff,
-					metalness: 0.2,
+					metalness: 0.2, // 材质与金属的相似程度，0非金属，1金属
 					bumpScale: 0.0005
 				});
 				var textureLoader = new THREE.TextureLoader();
@@ -139,7 +142,7 @@
 					map.wrapS = THREE.RepeatWrapping;
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
-					map.repeat.set( 10, 24 );
+					map.repeat.set( 10, 24 ); // 纹理在u、v方向上的重复次数。如果大于1的话，wrapS、wrapT也要对应设置成THREE.RepeatWrapping or THREE.MirroredRepeatWrapping
 					floorMat.map = map;
 					floorMat.needsUpdate = true;
 				} );
@@ -148,7 +151,7 @@
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
 					map.repeat.set( 10, 24 );
-					floorMat.bumpMap = map;
+					floorMat.bumpMap = map; // 凹凸贴图
 					floorMat.needsUpdate = true;
 				} );
 				textureLoader.load( "textures/hardwood2_roughness.jpg", function( map ) {
@@ -156,7 +159,7 @@
 					map.wrapT = THREE.RepeatWrapping;
 					map.anisotropy = 4;
 					map.repeat.set( 10, 24 );
-					floorMat.roughnessMap = map;
+					floorMat.roughnessMap = map; // 纹理的绿色通道用来改变材料的粗糙度
 					floorMat.needsUpdate = true;
 				} );
 

@@ -18,6 +18,11 @@ Object.assign( Clock.prototype, {
 
 	start: function () {
 
+		/*
+			window.performance.now()的精度要高于Date.now()，
+			另外，window.performance.now()是以一个恒定的速率慢慢增加的,它不会受到系统时间的影响(可能被其他软件调整)。
+			performance.timing.navigationStart + performance.now() 约等于 Date.now()
+		*/
 		this.startTime = ( typeof performance === 'undefined' ? Date : performance ).now(); // see #10732
 
 		this.oldTime = this.startTime;

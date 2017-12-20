@@ -13,6 +13,7 @@ function PointLight( color, intensity, distance, decay ) {
 
 	this.type = 'PointLight';
 
+	// power和intensity之间有定量的关系
 	Object.defineProperty( this, 'power', {
 		get: function () {
 
@@ -33,6 +34,9 @@ function PointLight( color, intensity, distance, decay ) {
 	this.distance = ( distance !== undefined ) ? distance : 0;
 	this.decay = ( decay !== undefined ) ? decay : 1;	// for physically correct lights, should be 2.
 
+	/*
+		LightShadow构造函数中的透视摄像机对象：以光源的视角观察世界。用来生成景深图；从光的角度看其他物体后面的物体将会在阴影中。
+	*/
 	this.shadow = new LightShadow( new PerspectiveCamera( 90, 1, 0.5, 500 ) );
 
 }
