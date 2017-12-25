@@ -77,7 +77,7 @@ function Object3D() {
 		}
 	} );
 
-	this.matrix = new Matrix4();
+	this.matrix = new Matrix4(); // 所有的变换都将累积到这个矩阵对象中
 	this.matrixWorld = new Matrix4();
 
 	this.matrixAutoUpdate = Object3D.DefaultMatrixAutoUpdate;
@@ -106,6 +106,9 @@ Object.assign( Object3D.prototype, EventDispatcher.prototype, {
 	onBeforeRender: function () {},
 	onAfterRender: function () {},
 
+	/*
+		对当前的对象应用矩阵变换
+	*/
 	applyMatrix: function ( matrix ) {
 
 		this.matrix.multiplyMatrices( matrix, this.matrix );
@@ -300,6 +303,7 @@ Object.assign( Object3D.prototype, EventDispatcher.prototype, {
 
 	}(),
 
+	// 旋转物体使其面向空间中一个点
 	lookAt: function () {
 
 		// This method does not support objects with rotated and/or translated parent(s)

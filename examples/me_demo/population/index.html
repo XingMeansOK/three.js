@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <style media="screen">
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="../../../build/three.js" charset="utf-8"></script>
+    <script src="./shaders.js" charset="utf-8"></script>
+    <script src="./utils.js" charset="utf-8"></script>
+    <script type="text/javascript">
+      // 全局变量
+      var scene, camera, renderer, earth, atmosphere, point;
+      var DISTANCE_TARGET_MAX = 1000, DISTANCE_TARGET_MIN = 350, PI_HALF = Math.PI / 2;
+      // 摄像机球极坐标（当前值）
+      var rotation = { phi: 0, theta: 0 }, distance = 100000;
+      // 摄像机球极坐标（期望值）
+      var target = { phi: Math.PI * 3 /2, theta: Math.PI / 6 }, distanceTarget = DISTANCE_TARGET_MAX;
+
+      /*
+        初始化场景
+      */
+      var init = ( function() {
+
+        var evt = new EventUtil(); // 工具对象，用于处理事件兼容性
+
+        var canvas; // 用于保存画布的DOM对象
+
+        // 处理鼠标拖拽要用到的参数
+        var mouseDown = { x: null, y: null }; // 鼠标按下的位置
+        var mouse = {x: null, y: null }; // 鼠标当前位置
+        var targetDown = { theta: null, phi: null }; // 鼠标按下时摄像机的球极坐标
+
+        // 事件处理函数（改变场景都是移动的摄像机，不断修改摄像机的球极坐标期望值）
+
+        // 改变摄像机和世界坐标系原点的期望距离，并将这个距离控制在一定范围内
+        function zoom(delta) {
+          distanceTarget -= delta;
+          distanceTarget = distanceTarget > DISTANCE_TARGET_MAX ? DISTANCE_TARGET_MAX : distanceTarget;
+          distanceTarget = distanceTarget < DISTANCE_TARGET_MIN ? DISTANCE_TARGET_MIN : distanceTarget;
+        }
+
+        function onWindowResize() {
+          camera.aspect = window.innerWidth / window.innerHeight; // 画布大小，为了投影不变形，需要改变视锥
+          camera.updateProjectionMatrix();
+          renderer.setSize( window.innerWidth, window.innerHeight );
+        }
+
+        function onMouseWheel( event ) {
+          // 非ff浏览器，每次往下滚动event.wheelDelta值都是-120。火狐向下滚动为3.这里将两种情况统一
+          event.delta = (event.wheelDelta) ? event.wheelDelta / 120 : -(event.detail || 0) / 3;
+          // 改变摄像机和世界坐标系原点的期望距离.
+          zoom( event.delta * 30 );
+        }
+
+        function onMouseDown( event ) {
+          event.preventDefault();
+
+          let x = event.pageX, y = event.pageY;
+          // 如果鼠标在canvas范围内
+          let rect = event.target.getBoundingClientRect();
+          if (rect.left <= x && x < rect.right && rect.top <= y && y < rect.bottom) {
+
+            evt.addHandler( canvas, 'mousemove', onMouseMove ); // 只有在鼠标按下的时候才监听这两个事件
+            evt.addHandler( canvas, 'mouseup', onMouseUp ); // 鼠标抬起来之后就不再监听了
+
+            mouseDown.x = x; // 保存鼠标按下的位置
+            mouseDown.y = y;
+
+            targetDown.theta = target.theta; // 记录鼠标按下时的摄像机球极坐标期望值
+            targetDown.phi = target.phi;
+
+            canvas.style.cursor = 'move';
+          }
+        }
+
+        function onMouseUp() {
+          // 鼠标没有按下就不监听鼠标移动和抬起事件
+          evt.removeHandler( canvas, 'mousemove', onMouseMove );
+          evt.removeHandler( canvas, 'mouseup', onMouseUp );
+          canvas.style.cursor = 'auto';
+        }
+
+        function onMouseMove( event ) {
+          mouse.x = event.pageX;
+          mouse.y = event.pageY;
+
+          var zoomDamp = distance/1000; // 摄像机和地球越近，转动的幅度越小
+          /*
+            摄像机的运动方向和鼠标是相反的。例如，鼠标向右拖拽，摄像机就应该在zx面顺时针转动
+          */
+          target.phi = targetDown.phi - (mouse.x - mouseDown.x) * 0.005 * zoomDamp; // 修改摄像机球极坐标期望值
+          target.theta = targetDown.theta + (mouse.y - mouseDown.y) * 0.005 * zoomDamp;
+
+          target.theta = target.theta > PI_HALF ? PI_HALF : target.theta; // 限制竖直角，不然掉个了会很奇怪
+          target.theta = target.theta < - PI_HALF ? - PI_HALF : target.theta;
+        }
+
+        return function() {
+
+          // 创建场景
+          scene = new THREE.Scene();
+          // 创建摄像机
+          camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 1, 10000 );
+          camera.position.z = distance; // 设置摄像机的位置在（0,0,100000）
+          // 也就是说一开始肯定是啥也看不到的，但是之后摄像机会向视线方向推进
+
+          /****************创建几何体及其材质*****************/
+          var geometry, material, shader, uniforms;
+
+          // 地球
+
+          // 创建地球球体
+          geometry = new THREE.SphereGeometry(200, 40, 30); // 半径，横向节点数，纵向节点数
+
+          /*
+            创建地球的材质。ShaderMaterial
+          */
+          shader = Shaders['earth']; // 获取着色器信息
+          // UniformsUtils是工具对象。复制一份uniform对象，其中包含了将传递给着色器的所有uniform变量
+          uniforms = THREE.UniformsUtils.clone( shader.uniforms );
+          // 加载纹理
+          uniforms['texture'].value = new THREE.TextureLoader().load( './world.jpg' );
+
+          // 材质 ShaderMaterial通常用于自定义材质
+          material = new THREE.ShaderMaterial( {
+            uniforms: uniforms, // uniforms对象传递给材质，以此实现js程序和glsl着色器之间的通信
+            vertexShader: shader.vertexShader, // 传入着色器对象
+            fragmentShader: shader.fragmentShader
+          } );
+          /*
+            在其他的demo中看到可以在每一帧渲染之前修改ShaderMaterial对象的uniforms的值：
+            例如，m.uniforms.time.value += 0.01; （m是ShaderMaterial实例）
+            在api中找到了根据：
+            Note that uniforms are refreshed on every frame,
+            so updating the value of the uniform will immediately update the value available to the GLSL code.
+          */
+
+          earth = new THREE.Mesh( geometry, material );
+          earth.rotation.y = Math.PI; // ？？？？？一直都没有明白为什么都要绕y轴转180°
+          scene.add( earth ); // 地球添加到场景中
+
+          // 大气。（地球外头一圈白光）
+
+          shader = Shaders['atmosphere']; // 获取着色器
+          uniforms = THREE.UniformsUtils.clone( shader.uniforms );
+
+          // 创建大气的材质
+          material = new THREE.ShaderMaterial( {
+            uniforms: uniforms,
+            vertexShader: shader.vertexShader,
+            fragmentShader: shader.fragmentShader,
+            side: THREE.BackSide, // 渲染哪一面。背面？像是加了一个背景布？？
+            blending: THREE.AdditiveBlending, // 混合模式，颜色与底层颜色重叠时的混合方式。这个模式是透明的
+            transparent: true // 是否透明
+          } );
+
+          atmosphere = new THREE.Mesh( geometry, material ); // 大气的几何体也用地球的
+          atmosphere.scale.set( 1.1, 1.1, 1.1 ); // 三个轴等比例放大1.1倍
+          scene.add( atmosphere ); // 大气添加到场景
+
+          // 长方体，用于表示单个数据点的几何体
+
+          geometry = new THREE.BoxGeometry( 0.75, 0.75, 1 ); // 分别是x,y,z方向上的长度
+          geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, -0.5 ) ); // x,y,z方向上的平移量
+          // 初始的几何体的中心是和世界坐标的原点重合的，这里是沿z轴负方向平移，立方体的pz面和世界坐标的原点重合
+
+          point = new THREE.Mesh( geometry ); // 没有定义材质的话，默认是一个带有随机颜色的MeshBasicMaterial
+
+          /************创建渲染器*************/
+
+          renderer = new THREE.WebGLRenderer( { antialias: true } ); // 开启抗锯齿
+          renderer.setSize( window.innerWidth, window.innerHeight );
+
+          // 创建画布父节点
+          var container = document.createElement( 'div' );
+          document.body.appendChild( container );
+
+          canvas = renderer.domElement; // 获取画布DOM对象
+          container.appendChild( canvas ); // 画布添加到DOM树
+
+          /************添加鼠标交互*************/
+
+          // evt.addHandler( canvas, 'mousedown', onMouseDown );
+          // 火狐的鼠标滚轮事件和其他的不同
+          if(window.navigator.userAgent.indexOf('Firefox') !=-1){ // 如果是火狐
+            canvas.addEventListener('DOMMouseScroll', onMouseWheel, false);
+          }else{
+            evt.addHandler( canvas, 'mousewheel', onMouseWheel );
+          }
+          evt.addHandler( canvas, 'mousedown', onMouseDown );
+          evt.addHandler( window, 'resize', onWindowResize );
+
+        }
+      }() )
+
+      // 数据加载及可视化
+
+      var dataVisualization = ( function() {
+
+        // 获取颜色
+
+        function colorFn( x ) {
+          var c = new THREE.Color();
+          c.setHSL( ( 0.6 - ( x * 0.5 ) ), 1.0, 0.5 );
+          return c;
+        }
+
+        // 添加单个柱子
+
+        function addPoint( lat, lng, size, color, subgeo ) {
+
+          var theta = (90 - lat) * Math.PI / 180; // 纬度转竖直角
+          var phi = (180 - lng) * Math.PI / 180; // 经度转水平角
+
+          point.position.x = 200 * Math.sin( theta ) * Math.cos( phi ); // 200是地球的半径
+          point.position.y = 200 * Math.cos( theta );
+          point.position.z = 200 * Math.sin( theta ) * Math.sin( phi );
+          /*
+            point最初的时候加上了一个平移（applyMatrix），这个平移变换将一直伴随着point
+            比如说设置point的position，也是在这个平移的基础上来移动
+          */
+
+          point.lookAt( earth.position ); // lookAt方法会修改Object3D对象的四元数属性，也就是姿态
+
+          point.scale.z = Math.max( size, 0.1 ); // avoid non-invertible matrix？？？
+          point.updateMatrix();
+
+          for ( var i = 0; i < point.geometry.faces.length; i++ ) { // Faces保存了几何体中的所有三角面
+
+            point.geometry.faces[i].color = color;
+
+          }
+          if( point.matrixAutoUpdate ){
+            point.updateMatrix();
+          }
+          subgeo.merge( point.geometry, point.matrix ); // 将point的几何体经过矩阵变换后合并到subgeo里
+        }
+
+        // 根据数据添加立方体
+
+        function addData( data ) {
+          var subgeo = new THREE.Geometry(); // 所有的point都将合并到这里
+          var lat, lng, color, size;
+          for( var i = 0, step = 3; i < data.length; i += step ) { // step是单个数据点的步长
+            lat = data[ i ];
+            lng = data[ i + 1 ];
+            color = colorFn( data[ i + 2 ] );
+            size = data[i + 2];
+            size = size*200;
+            addPoint(lat, lng, size, color, subgeo);
+          }
+
+          scene.add( new THREE.Mesh( subgeo, new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                vertexColors: THREE.FaceColors,
+                morphTargets: true
+              }) ) );
+        }
+
+        /*
+          加载数据
+          @param callBack function 数据加载成功之后的回调函数。animate函数将传进来
+          数据加载成功之后开始逐帧渲染；实际上不传参数直接在函数内用animate也是访问得到的，但是这样程序的语义就不明确了
+        */
+        return function( callBack ) {
+          var xhr = new XMLHttpRequest();
+          xhr.open( 'GET', './population909500.json', true );
+          xhr.onreadystatechange = function( e ) { // 请求成功的回调
+            if( xhr.readyState === 4 && xhr.status === 200 ) { // DONE && 请求成功
+              var data = JSON.parse( xhr.responseText );
+              addData( data[0][1] );
+              callBack(); // 开始渲染
+            }
+          }
+          xhr.send(null); // 发送请求
+        }
+
+      }() )
+
+      // 逐帧渲染
+
+      var animate = ( function () {
+
+        var MOVESPEED = 0.1, SPINSPEED = MOVESPEED / 3; // 用于控制旋转和缩放的速率
+
+        function render() {
+
+          // 地球一开始旋转着由小变大的效果
+
+          rotation.phi += (target.phi - rotation.phi) * SPINSPEED; // rotation是摄像机当前的球极坐标，减速逼近目标值target
+          rotation.theta += (target.theta - rotation.theta) * SPINSPEED;
+          distance += (distanceTarget - distance) * MOVESPEED; // distance是摄像机当前到球极坐标原点的距离，减速逼近目标值distanceTarget
+
+          /*
+            实际上运动的是摄像机。摄像机螺旋地向地球逼近。描述摄像机的运动采用的是球极坐标。球极坐标原点和世界坐标系原点重合
+            theta表示与水平面（xz）的夹角，向上为正
+            phi表示与z(+)y面的夹角，逆时针旋转为正
+            distance是摄像机和原点的距离
+
+            通过球极坐标计算摄像机在世界坐标系下的坐标
+          */
+          camera.position.x = distance * Math.sin(rotation.phi) * Math.cos(rotation.theta);
+          camera.position.y = distance * Math.sin(rotation.theta);
+          camera.position.z = distance * Math.cos(rotation.phi) * Math.cos(rotation.theta);
+
+          camera.lookAt( earth.position ); // 摄像机始终盯着地球
+
+          renderer.render( scene, camera );
+        }
+
+        return function () {
+          /*
+            arguments.callee代表当前函数自身，用于递归调用。但是在严格模式下不行
+            严格模式下可以给当前函数命名，然后通过函数名递归调用
+            requestAnimationFrame( animate );直接这样也没啥问题，可以在作用域链中找到animate
+          */
+          requestAnimationFrame( arguments.callee );
+          render();
+        }
+      }() )
+
+      init(); // 初始化场景
+      dataVisualization( animate ); // 加载数据、可视化、开始渲染
+    </script>
+  </body>
+</html>

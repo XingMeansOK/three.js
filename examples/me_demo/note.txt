@@ -3,3 +3,6 @@ Mesh的raycast方法中，将当前mesh的geometry最小包围球复制给了另
 复制的过程不会应用变换吗？查看copy的源码，验证一下
 
 屏幕坐标系下的z值信息
+
+lookAt--四元数
+makeTranslate 和修改position的区别

@@ -697,6 +697,11 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 
 	},
 
+	/*
+		将参数geometry合并到当前对象
+		@param geometry Geometry 要被合并的几何体
+		@param matrix 变换矩阵，这个矩阵将应用到参数geometry的顶点上
+	*/
 	merge: function ( geometry, matrix, materialIndexOffset ) {
 
 		if ( ! ( geometry && geometry.isGeometry ) ) {
@@ -726,6 +731,7 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 		}
 
 		// vertices
+		// 合并顶点
 
 		for ( var i = 0, il = vertices2.length; i < il; i ++ ) {
 
@@ -733,6 +739,7 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 
 			var vertexCopy = vertex.clone();
 
+			// 如果传入了第二个参数，那么合并的就是应用了矩阵变换的顶点
 			if ( matrix !== undefined ) vertexCopy.applyMatrix4( matrix );
 
 			vertices1.push( vertexCopy );

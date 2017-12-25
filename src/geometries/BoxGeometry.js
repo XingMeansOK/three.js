@@ -25,6 +25,7 @@ function BoxGeometry( width, height, depth, widthSegments, heightSegments, depth
 		depthSegments: depthSegments
 	};
 
+	// 本质上构造几何体还是通过BufferGeometry
 	this.fromBufferGeometry( new BoxBufferGeometry( width, height, depth, widthSegments, heightSegments, depthSegments ) );
 	this.mergeVertices();
 
@@ -76,6 +77,10 @@ function BoxBufferGeometry( width, height, depth, widthSegments, heightSegments,
 
 	// build each side of the box geometry
 
+	/*
+		后面注释里的p、n分别是positive和negative
+		px也就是垂直于x轴，与x轴正半轴相交的面
+	*/
 	buildPlane( 'z', 'y', 'x', - 1, - 1, depth, height, width, depthSegments, heightSegments, 0 ); // px
 	buildPlane( 'z', 'y', 'x', 1, - 1, depth, height, - width, depthSegments, heightSegments, 1 ); // nx
 	buildPlane( 'x', 'z', 'y', 1, 1, width, depth, height, widthSegments, depthSegments, 2 ); // py
@@ -90,8 +95,16 @@ function BoxBufferGeometry( width, height, depth, widthSegments, heightSegments,
 	this.addAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
 	this.addAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
 
+	/*
+		构建立方体的一个面
+		@param width 这个面的宽度
+		@param height 这个面的高度
+		@param depth 这个面和坐标轴相交的位置
+		@param gridX gridY 这个面横向、纵向的节点数
+	*/
 	function buildPlane( u, v, w, udir, vdir, width, height, depth, gridX, gridY, materialIndex ) {
 
+		// 根据节点数分割面，得到的一小块的宽高
 		var segmentWidth = width / gridX;
 		var segmentHeight = height / gridY;
 
@@ -121,9 +134,20 @@ function BoxBufferGeometry( width, height, depth, widthSegments, heightSegments,
 
 				// set values to correct vector component
 
+				/*
+					以px面为例，
+					这里的x指的是这个面的横向坐标，对应的是世界坐标系里的z轴
+					y指的是这个面的纵向坐标，对应世界坐标系里的y轴
+					深度对应的是世界坐标系里的x轴。所以，参数uvw分别是zyx
+				*/
 				vector[ u ] = x * udir;
 				vector[ v ] = y * vdir;
 				vector[ w ] = depthHalf;
+
+				/*
+					构造函数前三个参数对应的就是立方体在xyz方向上的长度，
+					并且初始创建出来的立方体的中心是与世界坐标的原点重合的
+				*/
 
 				// now apply vector to vertex buffer
 
