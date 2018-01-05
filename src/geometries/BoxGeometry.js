@@ -27,6 +27,7 @@ function BoxGeometry( width, height, depth, widthSegments, heightSegments, depth
 
 	// 本质上构造几何体还是通过BufferGeometry
 	this.fromBufferGeometry( new BoxBufferGeometry( width, height, depth, widthSegments, heightSegments, depthSegments ) );
+	// 剔除掉冗余的重复顶点和没有构成三角形的面
 	this.mergeVertices();
 
 }

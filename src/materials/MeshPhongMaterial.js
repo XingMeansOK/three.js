@@ -53,6 +53,10 @@ import { Color } from '../math/Color.js';
  * }
  */
 
+ /*
+ 	使用Phong shading （冯氏着色的材质）
+ */
+
 function MeshPhongMaterial( parameters ) {
 
 	Material.call( this );

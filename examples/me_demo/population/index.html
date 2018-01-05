@@ -171,6 +171,7 @@
           geometry = new THREE.BoxGeometry( 0.75, 0.75, 1 ); // 分别是x,y,z方向上的长度
           geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, -0.5 ) ); // x,y,z方向上的平移量
           // 初始的几何体的中心是和世界坐标的原点重合的，这里是沿z轴负方向平移，立方体的pz面和世界坐标的原点重合
+          // 相当于修改几何体的中心点位置，原来的中心是在几何体的中心，现在是在pz面的中心
 
           point = new THREE.Mesh( geometry ); // 没有定义材质的话，默认是一个带有随机颜色的MeshBasicMaterial
 

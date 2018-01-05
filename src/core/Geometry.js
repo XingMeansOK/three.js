@@ -62,10 +62,15 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 
 	isGeometry: true,
 
+	/*
+		几何体应用矩阵变换。这个方法会直接修改顶点和法向量的值
+		设置几何体的rotation和position并不会将变换直接应用到vertices上，而是存在modelMatrix里
+	*/
 	applyMatrix: function ( matrix ) {
 
-		var normalMatrix = new Matrix3().getNormalMatrix( matrix );
+		var normalMatrix = new Matrix3().getNormalMatrix( matrix ); // 逆转置矩阵，用于变换法向量
 
+		// 变换顶点坐标
 		for ( var i = 0, il = this.vertices.length; i < il; i ++ ) {
 
 			var vertex = this.vertices[ i ];
@@ -73,6 +78,7 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 
 		}
 
+		// 变换法向量
 		for ( var i = 0, il = this.faces.length; i < il; i ++ ) {
 
 			var face = this.faces[ i ];
@@ -211,6 +217,9 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 
 	}(),
 
+	/*
+		Geometry的构造函数中都会调用这个函数，通过一个BufferGeometry来构造自己（可以看看BoxGeometry，里面有比较完整的注释）
+	*/
 	fromBufferGeometry: function ( geometry ) {
 
 		var scope = this;
@@ -844,9 +853,13 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 	 * Duplicated vertices are removed
 	 * and faces' vertices are updated.
 	 */
+	 /*
+	 	用于剔除几何体中的重复顶点
+	 */
 
 	mergeVertices: function () {
 
+		// 用于存放键值对的对象。根据顶点的位置生成键，值是顶点在原顶点数组中的索引
 		var verticesMap = {}; // Hashmap for looking up vertices by position coordinates (and making sure they are unique)
 		var unique = [], changes = [];
 
@@ -856,36 +869,48 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 		var i, il, face;
 		var indices, j, jl;
 
+		// 遍历顶点数组
 		for ( i = 0, il = this.vertices.length; i < il; i ++ ) {
 
 			v = this.vertices[ i ];
 			key = Math.round( v.x * precision ) + '_' + Math.round( v.y * precision ) + '_' + Math.round( v.z * precision );
 
-			if ( verticesMap[ key ] === undefined ) {
+			if ( verticesMap[ key ] === undefined ) { // 如果顶点是唯一的
 
-				verticesMap[ key ] = i;
-				unique.push( this.vertices[ i ] );
+				verticesMap[ key ] = i; // 值：顶点在原顶点数组中的索引
+				unique.push( this.vertices[ i ] ); // 保存顶点的坐标
 				changes[ i ] = unique.length - 1;
 
-			} else {
+			} else { // 如果这个顶点已经存在
 
 				//console.log('Duplicate vertex found. ', i, ' could be using ', verticesMap[key]);
 				changes[ i ] = changes[ verticesMap[ key ] ];
 
 			}
 
+			/*
+				筛选后确认唯一的顶点都保存在unique中
+
+				changes保存的是unique中的索引。例如：原顶点数组为[a,b,c,a,b,d]（字母表示坐标）
+				则，unique是[a,b,c,d]，changes就是[0,1,2,0,1,3].
+				实际上changes就是一个顶点索引
+			*/
+
 		}
 
 
 		// if faces are completely degenerate after merging vertices, we
 		// have to remove them from the geometry.
+		/*
+			移除顶点重复的三角面。比如一个三角面的三个顶点是a,a,b，就要被移除了
+		*/
 		var faceIndicesToRemove = [];
 
 		for ( i = 0, il = this.faces.length; i < il; i ++ ) {
 
 			face = this.faces[ i ];
 
-			face.a = changes[ face.a ];
+			face.a = changes[ face.a ]; // changes[原顶点数组索引] => uniques 索引
 			face.b = changes[ face.b ];
 			face.c = changes[ face.c ];
 
@@ -895,6 +920,7 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 			// we have to remove the face as nothing can be saved
 			for ( var n = 0; n < 3; n ++ ) {
 
+				// 判断一个三角面中三个顶点是否有重复的。这个三个值相互比较好溜啊。。。666.。。
 				if ( indices[ n ] === indices[ ( n + 1 ) % 3 ] ) {
 
 					faceIndicesToRemove.push( i );
@@ -906,6 +932,9 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 
 		}
 
+		/*
+			删除重复顶点的面和其对应的uv
+		*/
 		for ( i = faceIndicesToRemove.length - 1; i >= 0; i -- ) {
 
 			var idx = faceIndicesToRemove[ i ];
@@ -923,7 +952,7 @@ Object.assign( Geometry.prototype, EventDispatcher.prototype, {
 		// Use unique set of vertices
 
 		var diff = this.vertices.length - unique.length;
-		this.vertices = unique;
+		this.vertices = unique; // 顶点使用无重复的顶点数组
 		return diff;
 
 	},

@@ -633,6 +633,7 @@ Object.assign( Matrix4.prototype, {
 
 	},
 
+	// 平移
 	makeTranslation: function ( x, y, z ) {
 
 		this.set(
